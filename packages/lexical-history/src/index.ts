@@ -297,10 +297,13 @@ function redo(editor: LexicalEditor, historyState: HistoryState): void {
       editor.dispatchCommand(CAN_REDO_COMMAND, false);
     }
 
-    historyState.current = historyStateEntry;
-    historyStateEntry.editor.setEditorState(historyStateEntry.editorState, {
-      tag: 'historic',
-    });
+    historyState.current = historyStateEntry || null;
+
+    if (historyStateEntry) {
+      historyStateEntry.editor.setEditorState(historyStateEntry.editorState, {
+        tag: 'historic',
+      });
+    }
   }
 }
 
@@ -322,13 +325,16 @@ function undo(editor: LexicalEditor, historyState: HistoryState): void {
       editor.dispatchCommand(CAN_UNDO_COMMAND, false);
     }
 
-    historyState.current = historyStateEntry;
-    historyStateEntry.editor.setEditorState(
-      historyStateEntry.editorState.clone(historyStateEntry.undoSelection),
-      {
-        tag: 'historic',
-      },
-    );
+    historyState.current = historyStateEntry || null;
+
+    if (historyStateEntry) {
+      historyStateEntry.editor.setEditorState(
+        historyStateEntry.editorState.clone(historyStateEntry.undoSelection),
+        {
+          tag: 'historic',
+        },
+      );
+    }
   }
 }
 
@@ -351,7 +357,13 @@ export function registerHistory(
     dirtyLeaves,
     dirtyElements,
     tags,
-  }) => {
+  }: {
+    editorState: EditorState;
+    prevEditorState: EditorState;
+    dirtyElements: Map<NodeKey, IntentionallyMarkedAsDirtyElement>;
+    dirtyLeaves: Set<NodeKey>;
+    tags: Set<string>;
+  }): void => {
     const current = historyState.current;
     const redoStack = historyState.redoStack;
     const undoStack = historyState.undoStack;
