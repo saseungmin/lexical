@@ -4,7 +4,6 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  *
- * @flow strict
  */
 
 import type {
@@ -17,7 +16,6 @@ import type {
   NodeSelection,
   RangeSelection,
 } from 'lexical';
-
 import {mergeRegister} from '@lexical/utils';
 import {
   $getSelection,
@@ -46,15 +44,14 @@ const DELETE_CHARACTER_BEFORE_SELECTION = 3;
 const DELETE_CHARACTER_AFTER_SELECTION = 4;
 
 export type HistoryStateEntry = {
-  editor: LexicalEditor,
-  editorState: EditorState,
-  undoSelection?: RangeSelection | NodeSelection | GridSelection | null,
+  editor: LexicalEditor;
+  editorState: EditorState;
+  undoSelection?: RangeSelection | NodeSelection | GridSelection | null;
 };
-
 export type HistoryState = {
-  current: null | HistoryStateEntry,
-  redoStack: Array<HistoryStateEntry>,
-  undoStack: Array<HistoryStateEntry>,
+  current: null | HistoryStateEntry;
+  redoStack: Array<HistoryStateEntry>;
+  undoStack: Array<HistoryStateEntry>;
 };
 
 function getDirtyNodes(
@@ -67,6 +64,7 @@ function getDirtyNodes(
 
   for (const dirtyLeafKey of dirtyLeaves) {
     const dirtyLeaf = nodeMap.get(dirtyLeafKey);
+
     if (dirtyLeaf !== undefined) {
       nodes.push(dirtyLeaf);
     }
@@ -76,11 +74,14 @@ function getDirtyNodes(
     if (!intentionallyMarkedAsDirty) {
       continue;
     }
+
     const dirtyElement = nodeMap.get(dirtyElementKey);
+
     if (dirtyElement !== undefined && !$isRootNode(dirtyElement)) {
       nodes.push(dirtyElement);
     }
   }
+
   return nodes;
 }
 
@@ -100,9 +101,11 @@ function getChangeType(
 
   const nextSelection = nextEditorState._selection;
   const prevSelection = prevEditorState._selection;
+
   if (isComposing) {
     return COMPOSING_CHARACTER;
   }
+
   if (
     !$isRangeSelection(nextSelection) ||
     !$isRangeSelection(prevSelection) ||
@@ -111,6 +114,7 @@ function getChangeType(
   ) {
     return OTHER;
   }
+
   const dirtyNodes = getDirtyNodes(
     nextEditorState,
     dirtyLeavesSet,
@@ -143,7 +147,9 @@ function getChangeType(
   }
 
   const nextDirtyNode = dirtyNodes[0];
+
   const prevDirtyNode = prevEditorState._nodeMap.get(nextDirtyNode.__key);
+
   if (
     !$isTextNode(prevDirtyNode) ||
     !$isTextNode(nextDirtyNode) ||
@@ -154,12 +160,14 @@ function getChangeType(
 
   const prevText = prevDirtyNode.__text;
   const nextText = nextDirtyNode.__text;
+
   if (prevText === nextText) {
     return OTHER;
   }
 
   const nextAnchor = nextSelection.anchor;
   const prevAnchor = prevSelection.anchor;
+
   if (nextAnchor.key !== prevAnchor.key || nextAnchor.type !== 'text') {
     return OTHER;
   }
@@ -167,12 +175,15 @@ function getChangeType(
   const nextAnchorOffset = nextAnchor.offset;
   const prevAnchorOffset = prevAnchor.offset;
   const textDiff = nextText.length - prevText.length;
+
   if (textDiff === 1 && prevAnchorOffset === nextAnchorOffset - 1) {
     return INSERT_CHARACTER_AFTER_SELECTION;
   }
+
   if (textDiff === -1 && prevAnchorOffset === nextAnchorOffset + 1) {
     return DELETE_CHARACTER_BEFORE_SELECTION;
   }
+
   if (textDiff === -1 && prevAnchorOffset === nextAnchorOffset) {
     return DELETE_CHARACTER_AFTER_SELECTION;
   }
@@ -228,16 +239,20 @@ function createMergeActionGetter(
       if (shouldMergeHistory) {
         return HISTORY_MERGE;
       }
+
       if (prevEditorState === null) {
         return HISTORY_PUSH;
       }
+
       const selection = nextEditorState._selection;
       const prevSelection = prevEditorState._selection;
       const hasDirtyNodes = dirtyLeaves.size > 0 || dirtyElements.size > 0;
+
       if (!hasDirtyNodes) {
         if (prevSelection === null && selection !== null) {
           return HISTORY_MERGE;
         }
+
         return DISCARD_HISTORY_CANDIDATE;
       }
 
@@ -267,16 +282,21 @@ function createMergeActionGetter(
 function redo(editor: LexicalEditor, historyState: HistoryState): void {
   const redoStack = historyState.redoStack;
   const undoStack = historyState.undoStack;
+
   if (redoStack.length !== 0) {
     const current = historyState.current;
+
     if (current !== null) {
       undoStack.push(current);
       editor.dispatchCommand(CAN_UNDO_COMMAND, true);
     }
+
     const historyStateEntry = redoStack.pop();
+
     if (redoStack.length === 0) {
       editor.dispatchCommand(CAN_REDO_COMMAND, false);
     }
+
     historyState.current = historyStateEntry;
     historyStateEntry.editor.setEditorState(historyStateEntry.editorState, {
       tag: 'historic',
@@ -288,16 +308,20 @@ function undo(editor: LexicalEditor, historyState: HistoryState): void {
   const redoStack = historyState.redoStack;
   const undoStack = historyState.undoStack;
   const undoStackLength = undoStack.length;
+
   if (undoStackLength !== 0) {
     const current = historyState.current;
     const historyStateEntry = undoStack.pop();
+
     if (current !== null) {
       redoStack.push(current);
       editor.dispatchCommand(CAN_REDO_COMMAND, true);
     }
+
     if (undoStack.length === 0) {
       editor.dispatchCommand(CAN_UNDO_COMMAND, false);
     }
+
     historyState.current = historyStateEntry;
     historyStateEntry.editor.setEditorState(
       historyStateEntry.editorState.clone(historyStateEntry.undoSelection),
@@ -320,6 +344,7 @@ export function registerHistory(
   delay: number,
 ): () => void {
   const getMergeAction = createMergeActionGetter(editor, delay);
+
   const applyChange = ({
     editorState,
     prevEditorState,
@@ -349,6 +374,7 @@ export function registerHistory(
       if (redoStack.length !== 0) {
         historyState.redoStack = [];
       }
+
       if (current !== null) {
         undoStack.push({
           ...current,
